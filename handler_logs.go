@@ -15,6 +15,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/promql/parser"
 	fh "github.com/valyala/fasthttp"
 )
@@ -248,17 +249,17 @@ func findMatchingLabelValue(labels []logproto.LabelAdapter, configuredLabels []s
 
 func streamLabels(s *logproto.Stream) ([]logproto.LabelAdapter, error) {
 	// Parse labels in prometheus format {foo="bar", baz="bax"}
-	lbls, err := parser.ParseMetric(s.Labels)
+	lbls, err := parser.NewParser(parser.Options{}).ParseMetric(s.Labels)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse stream labels: %w", err)
 	}
-	result := make([]logproto.LabelAdapter, 0, len(lbls))
-	for _, l := range lbls {
+	result := make([]logproto.LabelAdapter, 0, lbls.Len())
+	lbls.Range(func(l labels.Label) {
 		result = append(result, logproto.LabelAdapter{
 			Name:  l.Name,
 			Value: l.Value,
 		})
-	}
+	})
 	return result, nil
 }
 
